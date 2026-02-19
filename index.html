@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Belote / C.Gasnier</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#3CB371">
+    <link rel="manifest" href="manifestmistral.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <style>
+        body { background: linear-gradient(to bottom, #2E8B57, #3CB371); padding: 5px; min-height: 100vh; color: white; font-family: sans-serif; }
+        .main-container { max-width: 600px; margin: 0 auto; padding: 5px; }
+        .card { transition: transform 0.2s; margin-bottom: 8px; color: black; }
+        .atout-display { width: 60px; height: 60px; border: 3px solid black; border-radius: 10px; background-color: white; display: flex; justify-content: center; align-items: center; font-size: 3rem; margin: 0 auto 5px; color: black; }
+        .atout-selector { display: flex; gap: 5px; justify-content: center; margin-bottom: 10px; }
+        .atout-option { width: 45px; height: 45px; border: 2px solid black; border-radius: 8px; background-color: white; display: flex; justify-content: center; align-items: center; cursor: pointer; font-size: 1.8rem; }
+        .score-buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-bottom: 8px; }
+        .score-btn { width: 45px; height: 45px; font-size: 1.2rem; font-weight: bold; }
+        .score-input { width: 75px; height: 45px; font-size: 1.4rem; text-align: center; margin: 0 5px; border: 1px solid #ccc; }
+        .score-input.active { border: 3px solid black !important; box-shadow: none; }
+        .donneur-highlight { color: #FFD700; text-shadow: 1px 1px 2px black; font-weight: bold; }
+        .belote-indicator { font-size: 0.9rem; color: #FFD700; display: block; height: 1.2rem; font-weight: bold; }
+        .btn-next-donneur { padding: 0px 8px; margin-left: 10px; font-size: 0.9rem; vertical-align: middle; }
+        .diff-container { display: flex; flex-direction: column; justify-content: center; align-items: center; min-width: 60px; }
+        .diff-value { font-size: 1.2rem; font-weight: bold; color: #FFD700; }
+
+        /* Styles navigation */
+        #pageHistorique { display: none; }
+        .nav-btn-container { text-align: center; margin-bottom: 10px; }
+        .historique-container { background: rgba(0,0,0,0.2); border-radius: 5px; padding: 5px; margin-top: 10px; }
+        #tableauHistorique { font-size: 0.85rem; color: white; }
+    </style>
+</head>
+
+<body>
+    <div class="main-container">
+        <div class="nav-btn-container" id="navBtns" style="display: none;">
+            <button class="btn btn-sm btn-light" id="btnPageJeu" onclick="afficherPage('jeu')">Score</button>
+            <button class="btn btn-sm btn-outline-light" id="btnPageHist" onclick="afficherPage('hist')">Historique</button>
+        </div>
+
+        <div id="pageJeu">
+            <div id="setupTour" style="display: none;">
+                <div class="text-center mb-2">
+                    <small>Qui a pris ?</small>
+                    <select id="selectPreneur" class="form-select form-select-sm mb-2 mx-auto" style="max-width: 200px;"></select>
+                </div>
+                <div class="atout-selector" id="atoutSelector">
+                    <div class="atout-option text-danger" onclick="selectAtout('♥', 'text-danger', 'Coeur')">♥</div>
+                    <div class="atout-option text-dark" onclick="selectAtout('♠', 'text-dark', 'Pique')">♠</div>
+                    <div class="atout-option text-danger" onclick="selectAtout('♦', 'text-danger', 'Carreau')">♦</div>
+                    <div class="atout-option text-dark" onclick="selectAtout('♣', 'text-dark', 'Trèfle')">♣</div>
+                </div>
+            </div>
+
+            <div class="text-center mb-2">
+                <div class="atout-display" id="atoutDisplay"></div>
+                <h4>Belote / C. Gasnier</h4>
+                <div>
+                    Donneur : <span id="donneur" class="donneur-highlight">Aucun</span>
+                    <button class="btn btn-sm btn-outline-warning btn-next-donneur" onclick="donneurSuivantManuel()" title="Donneur suivant">
+                        <i class="fas fa-redo"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="row g-2 mb-3 align-items-center">
+                <div class="col-4 text-center">
+                    <span id="star1" class="belote-indicator"></span>
+                    <div class="card bg-light">
+                        <div class="card-header bg-primary text-white p-1">
+                            <h6 class="mb-0 text-truncate"><span id="nomEquipe1">Eq 1</span></h6>
+                        </div>
+                        <div class="card-body p-2"><p class="h3 mb-0" id="scoreEquipe1">0</p></div>
+                    </div>
+                </div>
+                <div class="col-4 text-center diff-container">
+                    <small class="text-white-50">DIFF</small>
+                    <div class="diff-value" id="valeurEcart">0</div>
+                </div>
+                <div class="col-4 text-center">
+                    <span id="star2" class="belote-indicator"></span>
+                    <div class="card bg-light">
+                        <div class="card-header bg-danger text-white p-1">
+                            <h6 class="mb-0 text-truncate"><span id="nomEquipe2">Eq 2</span></h6>
+                        </div>
+                        <div class="card-body p-2"><p class="h3 mb-0" id="scoreEquipe2">0</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mb-2">
+                <span class="badge bg-dark">Tour : <span id="tourActuel">1/12</span></span>
+            </div>
+
+            <div class="d-flex justify-content-center align-items-center mb-3">
+                <div class="text-center">
+                    <small>Éq. 1</small>
+                    <input type="text" id="pointsEquipe1" class="form-control score-input active" onclick="setActiveTeam(1)" readonly>
+                </div>
+                <div class="text-center">
+                    <small>Éq. 2</small>
+                    <input type="text" id="pointsEquipe2" class="form-control score-input" onclick="setActiveTeam(2)" readonly>
+                </div>
+            </div>
+
+            <div class="score-buttons">
+                <button class="btn btn-outline-light score-btn" onclick="ajouterChiffre(1)">1</button>
+                <button class="btn btn-outline-light score-btn" onclick="ajouterChiffre(2)">2</button>
+                <button class="btn btn-outline-light score-btn" onclick="ajouterChiffre(3)">3</button>
+                <button class="btn btn-outline-light score-btn" onclick="ajouterChiffre(4)">4</button>
+                <button class="btn btn-outline-light score-btn" onclick="ajouterChiffre(5)">5</button>
+                <button class="btn btn-outline-light score-btn" onclick="ajouterChiffre(6)">6</button>
+                <button class="btn btn-outline-light score-btn" onclick="ajouterChiffre(7)">7</button>
+                <button class="btn btn-outline-light score-btn" onclick="ajouterChiffre(8)">8</button>
+                <button class="btn btn-outline-light score-btn" onclick="ajouterChiffre(9)">9</button>
+                <button class="btn btn-outline-light score-btn" onclick="ajouterChiffre(0)">0</button>
+            </div>
+
+            <div class="d-flex justify-content-center gap-2 mb-3">
+                <button class="btn btn-primary" onclick="validerTour()">Valider Tour</button>
+                <button class="btn btn-warning" onclick="effacerChiffres()">Effacer</button>
+            </div>
+
+            <div class="text-center">
+                <div class="mb-2">
+                    <small>Bonus Belote :</small>
+                    <input type="radio" name="equipeSelectionnee" id="eq1" value="0" checked> <label for="eq1">Équipe 1</label>
+                    <input type="radio" name="equipeSelectionnee" id="eq2" value="1"> <label for="eq2">Équipe 2</label>
+                </div>
+                <div class="d-flex flex-wrap justify-content-center gap-1 mb-3">
+                    <button class="btn btn-success btn-sm" onclick="ajouterBeloteEnMemoire()">Belote (+20)</button>
+                    <button class="btn btn-danger btn-sm" onclick="ajouterCapot()">Capot (252)</button>
+                    <button class="btn btn-info btn-sm text-white" onclick="annonceManuelle()"><i class="fas fa-volume-up"></i></button>
+                    <button class="btn btn-secondary btn-sm" onclick="annulerDernier()">Annuler</button>
+                    <button class="btn btn-dark btn-sm" onclick="confirmationNouvellePartie()">Nouvelle Partie</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="pageHistorique">
+            <h5 class="text-center">Historique des plis</h5>
+            <div class="historique-container">
+                <table class="table table-sm table-dark table-striped mb-0 text-center">
+                    <thead><tr><th>T</th><th>Éq1</th><th>Éq2</th><th>Atout</th><th>Donneur</th><th>Preneur</th></tr></thead>
+                    <tbody id="tableauHistorique"></tbody>
+                </table>
+            </div>
+            <div class="text-center mt-3">
+                <button class="btn btn-primary" onclick="afficherPage('jeu')">Retour au Score</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="saisieJoueursModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog"><div class="modal-content text-dark">
+            <div class="modal-header"><h5>Nouvelle Partie</h5></div>
+            <div class="modal-body">
+                <input type="text" id="j1" class="form-control mb-2" placeholder="Vous">
+                <input type="text" id="j2" class="form-control mb-2" placeholder="Joueur à gauche">
+                <input type="text" id="j3" class="form-control mb-2" placeholder="Votre partenaire">
+                <input type="text" id="j4" class="form-control mb-2" placeholder="Joueur à droite">
+                <hr>
+                <label class="small fw-bold">Premier donneur :</label>
+                <select id="pDonneur" class="form-select">
+                    <option value="0">Vous</option><option value="1">Joueur à gauche</option>
+                    <option value="2">Votre partenaire</option><option value="3">Joueur à droite</option>
+                </select>
+            </div>
+            <div class="modal-footer"><button class="btn btn-primary w-100" onclick="demarrer()">Commencer</button></div>
+        </div></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let scores = [0, 0], historique = [], joueurs = [], tour = 1, dIdx = 0, eqActive = 1, atout = "", colorAtout = "", partieEnCours = false;
+        let beloteEnAttente = null;
+
+        function afficherPage(page) {
+            if (page === 'jeu') {
+                document.getElementById('pageJeu').style.display = 'block';
+                document.getElementById('pageHistorique').style.display = 'none';
+                document.getElementById('btnPageJeu').className = 'btn btn-sm btn-light';
+                document.getElementById('btnPageHist').className = 'btn btn-sm btn-outline-light';
+            } else {
+                document.getElementById('pageJeu').style.display = 'none';
+                document.getElementById('pageHistorique').style.display = 'block';
+                document.getElementById('btnPageJeu').className = 'btn btn-sm btn-outline-light';
+                document.getElementById('btnPageHist').className = 'btn btn-sm btn-light';
+            }
+        }
+
+        function chargerNoms() {
+            if(localStorage.getItem('belote_j1')) document.getElementById('j1').value = localStorage.getItem('belote_j1');
+            if(localStorage.getItem('belote_j2')) document.getElementById('j2').value = localStorage.getItem('belote_j2');
+            if(localStorage.getItem('belote_j3')) document.getElementById('j3').value = localStorage.getItem('belote_j3');
+            if(localStorage.getItem('belote_j4')) document.getElementById('j4').value = localStorage.getItem('belote_j4');
+        }
+
+        function demarrer() {
+            joueurs = [
+                document.getElementById("j1").value || "Vous", 
+                document.getElementById("j2").value || "Joueur Gauche", 
+                document.getElementById("j3").value || "Partenaire", 
+                document.getElementById("j4").value || "Joueur Droite"
+            ];
+            localStorage.setItem('belote_j1', joueurs[0]);
+            localStorage.setItem('belote_j2', joueurs[1]);
+            localStorage.setItem('belote_j3', joueurs[2]);
+            localStorage.setItem('belote_j4', joueurs[3]);
+
+            const sel = document.getElementById("selectPreneur");
+            sel.innerHTML = '<option value="">-- Preneur --</option>';
+            joueurs.forEach((j, index) => {
+                sel.innerHTML += `<option value="${index}">${j}</option>`;
+            });
+
+            dIdx = parseInt(document.getElementById("pDonneur").value);
+            document.getElementById("nomEquipe1").textContent = joueurs[0] + " & " + joueurs[2];
+            document.getElementById("nomEquipe2").textContent = joueurs[1] + " & " + joueurs[3];
+            document.getElementById("setupTour").style.display = "block";
+            document.getElementById("navBtns").style.display = "block";
+            MAJ_Donneur();
+            bootstrap.Modal.getInstance(document.getElementById("saisieJoueursModal")).hide();
+            partieEnCours = true;
+            afficherPage('jeu');
+        }
+
+        function MAJ_Donneur() { document.getElementById("donneur").textContent = joueurs[dIdx]; }
+
+        function donneurSuivantManuel() {
+            dIdx = (dIdx + 1) % 4;
+            MAJ_Donneur();
+            annonceVocale("Le nouveau donneur est " + joueurs[dIdx]);
+        }
+
+        function setActiveTeam(n) { 
+            eqActive = n; 
+            document.getElementById("pointsEquipe1").classList.toggle("active", n===1);
+            document.getElementById("pointsEquipe2").classList.toggle("active", n===2);
+        }
+
+        function ajouterChiffre(c) {
+            const inp = document.getElementById(`pointsEquipe${eqActive}`);
+            let newVal = inp.value + c;
+            if (parseInt(newVal) <= 162) {
+                inp.value = parseInt(newVal);
+                document.getElementById(`pointsEquipe${eqActive===1?2:1}`).value = 162 - parseInt(newVal);
+            }
+        }
+
+        function effacerChiffres() { 
+            document.getElementById("pointsEquipe1").value = ""; 
+            document.getElementById("pointsEquipe2").value = ""; 
+            beloteEnAttente = null;
+            document.getElementById("star1").textContent = "";
+            document.getElementById("star2").textContent = "";
+        }
+
+        function selectAtout(s, c, nom) { 
+            atout = s; colorAtout = c; 
+            document.getElementById("atoutDisplay").innerHTML = `<span class="${c}">${s}</span>`; 
+            annonceVocale("Atout " + nom);
+        }
+
+        function ajouterBeloteEnMemoire() {
+            const eq = parseInt(document.querySelector('input[name="equipeSelectionnee"]:checked').value);
+            beloteEnAttente = eq;
+            document.getElementById("star1").textContent = (eq === 0) ? "⭐ Belote" : "";
+            document.getElementById("star2").textContent = (eq === 1) ? "⭐ Belote" : "";
+            let nomsEquipe = (eq === 0) ? `${joueurs[0]} et ${joueurs[2]}` : `${joueurs[1]} et ${joueurs[3]}`;
+            annonceVocale("Belote enregistrée pour " + nomsEquipe);
+        }
+
+        function ajouterCapot() {
+            const eq = parseInt(document.querySelector('input[name="equipeSelectionnee"]:checked').value);
+            let p1 = (eq === 0) ? 252 : 0;
+            let p2 = (eq === 1) ? 252 : 0;
+            let nomsEquipe = (eq === 0) ? `${joueurs[0]} et ${joueurs[2]}` : `${joueurs[1]} et ${joueurs[3]}`;
+            annonceVocale("Capot pour " + nomsEquipe);
+            enregistrerTour(p1, p2, "Capot");
+        }
+
+        function validerTour() {
+            let p1 = parseInt(document.getElementById("pointsEquipe1").value) || 0;
+            let p2 = parseInt(document.getElementById("pointsEquipe2").value) || 0;
+            if (p1 === 0 && p2 === 0) return alert("Veuillez saisir les points du tour.");
+            let preneurIdx = document.getElementById("selectPreneur").value;
+            let preneurNom = preneurIdx !== "" ? joueurs[parseInt(preneurIdx)] : "Non défini";
+            if (beloteEnAttente === 0) { p1 += 20; }
+            else if (beloteEnAttente === 1) { p2 += 20; }
+            enregistrerTour(p1, p2, preneurNom);
+        }
+
+        function enregistrerTour(p1, p2, note) {
+            historique.push({ t: tour, p1, p2, at: atout, col: colorAtout, d: joueurs[dIdx], n: note });
+            scores[0] += p1; scores[1] += p2;
+            MAJ_Tableau();
+            effacerChiffres();
+            document.getElementById("selectPreneur").value = "";
+            atout = ""; 
+            document.getElementById("atoutDisplay").innerHTML = "";
+
+            if (tour < 12) {
+                tour++; dIdx = (dIdx + 1) % 4;
+                document.getElementById("tourActuel").textContent = tour + "/12";
+                MAJ_Donneur(); 
+                annonceVocale(`C'est au tour de ${joueurs[dIdx]} de donner.`);
+            } else { 
+                let msg = "Partie terminée. ";
+                let eq1Noms = `${joueurs[0]} et ${joueurs[2]}`;
+                let eq2Noms = `${joueurs[1]} et ${joueurs[3]}`;
+                if (scores[0] > scores[1]) {
+                    msg += `L'équipe qui a gagné est ${eq1Noms} avec ${scores[0]} points. `;
+                    msg += `L'équipe perdante, dont je vais taire les noms, marque ${scores[1]} points.`;
+                } else if (scores[1] > scores[0]) {
+                    msg += `L'équipe qui a gagné est ${eq2Noms} avec ${scores[1]} points. `;
+                    msg += `L'équipe perdante, dont je vais taire les noms, marque ${scores[0]} points.`;
+                } else {
+                    msg += `Match nul ! ${scores[0]} partout. Je ne peux donc pas désigner un gagnant ou perdant, sauf si vous me donner 50 euros.`;
+                }
+                annonceVocale(msg);
+            }
+        }
+
+        function MAJ_Tableau() {
+            document.getElementById("scoreEquipe1").textContent = scores[0];
+            document.getElementById("scoreEquipe2").textContent = scores[1];
+            document.getElementById("valeurEcart").textContent = Math.abs(scores[0] - scores[1]);
+            const tbody = document.getElementById("tableauHistorique");
+            tbody.innerHTML = "";
+            historique.forEach(h => {
+                let r = tbody.insertRow();
+                r.innerHTML = `<td>${h.t}</td><td>${h.p1}</td><td>${h.p2}</td><td><span class="${h.col}">${h.at}</span></td><td>${h.d}</td><td>${h.n}</td>`;
+            });
+        }
+
+        function annulerDernier() {
+            if (historique.length === 0) return;
+            const last = historique.pop();
+            scores[0] -= last.p1; scores[1] -= last.p2;
+            if (tour > 1 && last.t === tour - 1) {
+                tour--; dIdx = (dIdx - 1 + 4) % 4;
+                document.getElementById("tourActuel").textContent = tour + "/12";
+            }
+            MAJ_Tableau(); MAJ_Donneur();
+        }
+
+        function annonceVocale(txt) {
+            const utterance = new SpeechSynthesisUtterance(txt);
+            utterance.lang = 'fr-FR';
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function annonceManuelle() {
+            let eq1Noms = `${joueurs[0]} et ${joueurs[2]}`;
+            let eq2Noms = `${joueurs[1]} et ${joueurs[3]}`;
+            annonceVocale(`Le score est de ${scores[0]} pour ${eq1Noms}, à ${scores[1]} pour ${eq2Noms}. C'est au tour de ${joueurs[dIdx]} de donner.`);
+        }
+
+        function confirmationNouvellePartie() {
+            if (confirm("Voulez-vous vraiment recommencer ?")) {
+                scores = [0, 0]; historique = []; tour = 1; dIdx = 0; beloteEnAttente = null;
+                document.getElementById("tableauHistorique").innerHTML = "";
+                document.getElementById("scoreEquipe1").textContent = "0";
+                document.getElementById("scoreEquipe2").textContent = "0";
+                document.getElementById("valeurEcart").textContent = "0";
+                document.getElementById("tourActuel").textContent = "1/12";
+                chargerNoms();
+                new bootstrap.Modal(document.getElementById('saisieJoueursModal')).show();
+            }
+        }
+
+        window.addEventListener('beforeunload', function (e) {
+            if (partieEnCours) { e.preventDefault(); e.returnValue = ''; }
+        });
+
+        window.onload = () => { 
+            chargerNoms(); 
+            new bootstrap.Modal(document.getElementById('saisieJoueursModal')).show(); 
+            document.getElementById('pageHistorique').style.display = 'none';
+        };
+    </script>
+</body>
+</html>
